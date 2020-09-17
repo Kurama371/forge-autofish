@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.network.play.ClientPlayNetHandler;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.FishingRodItem;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.play.client.CPlayerTryUseItemPacket;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.vector.Vector3d;
@@ -22,6 +23,7 @@ import net.minecraftforge.fml.common.Mod;
 public class AutoFishHandler {
 
     private boolean autofishenabled;
+    private boolean rodprotectenabled;
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
@@ -32,6 +34,12 @@ public class AutoFishHandler {
                 Minecraft.getInstance().player.sendStatusMessage(new TranslationTextComponent("toggle.forgeautofish", (autofishenabled ? "\u00A7aEnabled" : "\u00A7cDisabled")), true);
             }
         }
+        if(KeyBinds.rodprotect.isPressed()) {
+            rodprotectenabled = !rodprotectenabled;
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.sendStatusMessage(new TranslationTextComponent("toggle.rodprotect", (rodprotectenabled ? "\u00A7aEnabled" : "\u00A7cDisabled")), true);
+            }
+        }
     }
 
     private boolean fished = false;
@@ -40,6 +48,7 @@ public class AutoFishHandler {
     @OnlyIn(Dist.CLIENT)
     public void onPlayerTick(TickEvent.PlayerTickEvent e) {
         if(!autofishenabled) return;
+        if(e.player.isSpectator()) return;
         if (Minecraft.getInstance().player != null && !e.player.getUniqueID().equals(Minecraft.getInstance().player.getUniqueID()))
             return;
 
@@ -71,6 +80,13 @@ public class AutoFishHandler {
                 startTimer();
             }
             if(e.player.getHeldItem(handWithFishingRod).isEmpty()) return;
+            ItemStack fishingRod = e.player.getHeldItem(handWithFishingRod);
+            if(fishingRod.isEmpty()) return;
+            if(fishingRod.getMaxDamage() - fishingRod.getDamage() < 3 && !e.player.isCreative()) {
+                Minecraft.getInstance().player.sendStatusMessage(new TranslationTextComponent("toggle.forgeautofish", "\u00A7cDisabled"), true);
+                autofishenabled = false;
+                return;
+            }
             new Thread(() -> {
                 try {
                     Thread.sleep(500);
